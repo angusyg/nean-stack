@@ -1,6 +1,6 @@
 {
   "name": "nean-stack",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "NeDB Express Angularjs Nodejs application stack",
   "main": "./backend/bin/www",
   "scripts": {

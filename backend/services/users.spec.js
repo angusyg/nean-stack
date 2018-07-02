@@ -4,7 +4,7 @@ const util = require('util');
 const proxyquire = require('proxyquire');
 const jsonwebtoken = require('jsonwebtoken');
 const User = require('../models/users');
-const config = require('../config/api');
+const { apiCfg } = require('../config');
 const { ApiError, UnauthorizedAccessError } = require('../models/errors');
 
 const refreshToken = '00000000-0000-0000-0000-000000000000';
@@ -47,7 +47,7 @@ describe('Module services/users', () => {
             roles: ['USER'],
             refreshToken,
           })
-          .save()
+          .save(),
         ])
         .then(() => done());
     });
@@ -72,7 +72,7 @@ describe('Module services/users', () => {
           expect(tokens).to.be.an('object');
           expect(tokens).to.have.own.property('refreshToken', refreshToken);
           expect(tokens).to.have.own.property('accessToken');
-          jwtVerify(tokens.accessToken, config.tokenSecretKey)
+          jwtVerify(tokens.accessToken, apiCfg.tokenSecretKey)
             .then(() => {
               User.findOne({ login: infos.login })
                 .then((user) => {
@@ -126,7 +126,7 @@ describe('Module services/users', () => {
       .then((token) => {
         expect(token).to.be.an('object');
         expect(token).to.have.own.property('accessToken');
-        return expect(jwtVerify(token.accessToken, config.tokenSecretKey)).to.be.fulfilled;
+        return expect(jwtVerify(token.accessToken, apiCfg.tokenSecretKey)).to.be.fulfilled;
       }));
 
     it('refreshToken(user: Object, refreshToken: string): should reject with an UnauthorizedAccessError for missing refresh token', (done) => {

@@ -3,7 +3,7 @@ const sinon = require('sinon');
 const camo = require('camo');
 const psp = require('passport');
 const jwt = require('jsonwebtoken');
-const config = require('../config/api');
+const { apiCfg } = require('../config');
 const User = require('../models/users');
 const passport = require('./passport');
 const { UnauthorizedAccessError, JwtTokenExpiredError, NoJwtTokenError, JwtTokenSignatureError } = require('../models/errors');
@@ -26,19 +26,19 @@ describe('Module helpers/passport', () => {
     const accessToken = jwt.sign({
       login: 'test',
       roles: ['USER'],
-    }, config.tokenSecretKey, { expiresIn: config.accessTokenExpirationTime });
+    }, apiCfg.tokenSecretKey, { expiresIn: apiCfg.accessTokenExpirationTime });
     const accessTokenExpired = jwt.sign({
       login: 'test',
       roles: ['USER'],
-    }, config.tokenSecretKey, { expiresIn: 0 });
+    }, apiCfg.tokenSecretKey, { expiresIn: 0 });
     const accessTokenBadSignature = jwt.sign({
       login: 'test',
       roles: ['USER'],
-    }, 'SECRET', { expiresIn: config.accessTokenExpirationTime });
+    }, 'SECRET', { expiresIn: apiCfg.accessTokenExpirationTime });
     const accessTokenUserNotFound = jwt.sign({
       login: 'test1',
       roles: ['USER'],
-    }, config.tokenSecretKey, { expiresIn: config.accessTokenExpirationTime });
+    }, apiCfg.tokenSecretKey, { expiresIn: apiCfg.accessTokenExpirationTime });
     const req = { headers: { authorization: '' } };
     const res = {};
     let next = () => true;

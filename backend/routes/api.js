@@ -2,14 +2,14 @@
  * @fileoverview App API router
  * @module routes/api
  * @requires {@link external:express}
- * @requires config/api
+ * @requires config
  * @requires controllers/api
  * @requires helpers/security
  * @requires helpers/resources
  */
 
 const express = require('express');
-const { loginPath, logoutPath, loggerPath, refreshPath, validateTokenPath, roles } = require('../config/api');
+const { apiCfg } = require('../config');
 const apiController = require('../controllers/api');
 const { requiresLogin } = require('../helpers/security');
 const resources = require('../helpers/resources');
@@ -26,7 +26,7 @@ const router = express.Router();
  * @code {204} if successful, no content
  * @name logger
  */
-router.post(loggerPath, apiController.logger);
+router.post(apiCfg.loggerPath, apiController.logger);
 
 /**
  * @path {POST} /login
@@ -41,7 +41,7 @@ router.post(loggerPath, apiController.logger);
  * @code {401} if password is not valid
  * @name login
  */
-router.post(loginPath, apiController.login);
+router.post(apiCfg.loginPath, apiController.login);
 
 /**
  * @path {GET} /logout
@@ -51,7 +51,7 @@ router.post(loginPath, apiController.login);
  * @code {401} if login is not valid
  * @name logout
  */
-router.get(logoutPath, requiresLogin, apiController.logout);
+router.get(apiCfg.logoutPath, requiresLogin, apiController.logout);
 
 /**
  * @path {GET} /refresh
@@ -64,7 +64,7 @@ router.get(logoutPath, requiresLogin, apiController.logout);
  * @code {500} if an unexpected error occurred
  * @name refresh
  */
-router.get(refreshPath, requiresLogin, apiController.refreshToken);
+router.get(apiCfg.refreshPath, requiresLogin, apiController.refreshToken);
 
 /**
  * @path {GET} /validate
@@ -74,21 +74,17 @@ router.get(refreshPath, requiresLogin, apiController.refreshToken);
  * @code {401} if JWT is invalid
  * @name validate
  */
-router.get(validateTokenPath, requiresLogin, apiController.validateToken);
+router.get(apiCfg.validateTokenPath, requiresLogin, apiController.validateToken);
 
 /** User resource */
 router.use('/users', resources.addResource('users', User, {
   global: {
     protected: true,
     roles: [
-      roles.ADMIN,
-      roles.USER,
+      apiCfg.roles.ADMIN,
+      apiCfg.roles.USER,
     ],
   },
-  filter: [
-    'password',
-    'refreshToken',
-  ],
 }).router);
 
 module.exports = router;

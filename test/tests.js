@@ -1,7 +1,7 @@
 process.env.DB_FOLDER = 'memory';
 process.env.TOKEN_SECRET = 'TOKEN_SECRET';
 
-const config = require('../backend/config/api');
+const { apiCfg } = require('../backend/config');
 const app = require('../backend/app');
 const baseTI = require('./api/base');
 const usersTI = require('./api/users');
@@ -17,7 +17,7 @@ describe('API integration tests', () => {
   after(done => server.close(() => done()));
 
   describe('Integration tests', () => {
-    baseTI(app, config);
-    usersTI(app, config);
+    baseTI(app, apiCfg);
+    usersTI(app, apiCfg);
   });
 });

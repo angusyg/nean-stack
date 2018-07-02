@@ -11,7 +11,7 @@
 
 const uuidv4 = require('uuid/v4');
 const jwt = require('jsonwebtoken');
-const config = require('../config/api');
+const { apiCfg } = require('../config');
 const User = require('../models/users');
 const { ApiError, UnauthorizedAccessError } = require('../models/errors');
 const logger = require('../helpers/logger');
@@ -31,7 +31,7 @@ function generateAccessToken(user) {
     id: user._id,
     login: user.login,
     roles: user.roles,
-  }, config.tokenSecretKey, { expiresIn: config.accessTokenExpirationTime });
+  }, apiCfg.tokenSecretKey, { expiresIn: apiCfg.accessTokenExpirationTime });
 }
 
 /**

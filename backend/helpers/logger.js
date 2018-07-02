@@ -6,13 +6,14 @@
  * @requires {@link external:pino-debug}
  * @requires {@link external:pino-multi-stream}
  * @requires {@link external:debug}
- * @requires config/logger
+ * @requires config
  */
 
 const fs = require('fs');
 const pino = require('pino');
-const multistream = require('pino-multi-stream').multistream;
-const config = require('../config/logger');
+const { multistream } = require('pino-multi-stream');
+const loggerCfg = require('../config/logger');
+
 
 /**
  * Creates streams depending current execution environment
@@ -27,17 +28,17 @@ function getStreams() {
   if (process.env.NODE_ENV === 'test') return streams;
   if (process.env.NODE_ENV === 'development') {
     streams.push({
-      level: config.debugLevel,
+      level: loggerCfg.debugLevel,
       stream: process.stderr,
     });
     streams.push({
-      level: config.debugLevel,
-      stream: fs.createWriteStream(config.debugFile, { flag: 'a' }),
+      level: loggerCfg.debugLevel,
+      stream: fs.createWriteStream(loggerCfg.debugFile, { flag: 'a' }),
     });
   }
   streams.push({
-    level: config.logLevel,
-    stream: fs.createWriteStream(config.logFile, { flag: 'a' }),
+    level: loggerCfg.logLevel,
+    stream: fs.createWriteStream(loggerCfg.logFile, { flag: 'a' }),
   });
   return streams;
 }
@@ -47,6 +48,6 @@ function getStreams() {
  * @private
  * @returns {Object}  logger
  */
-const logger = pino({ level: config.debugLevel }, multistream(getStreams()));
+const logger = pino({ level: loggerCfg.debugLevel }, multistream(getStreams()));
 
 module.exports = logger;

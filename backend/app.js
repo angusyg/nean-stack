@@ -27,8 +27,7 @@ const pino = require('express-pino-logger');
 const uuidv4 = require('uuid/v4');
 const helmet = require('helmet');
 const cors = require('cors');
-const appConfig = require('./config/app');
-const { connect } = require('./config/db');
+const { appCfg, dbCfg } = require('./config');
 const errorHandler = require('./helpers/errorhandler');
 const logger = require('./helpers/logger');
 const security = require('./helpers/security');
@@ -36,7 +35,7 @@ const apiRouter = require('./routes/api');
 
 const app = express();
 
-app.set('port', appConfig.app.port);
+app.set('port', appCfg.app.port);
 
 // Logger middleware
 app.use(pino({
@@ -45,11 +44,11 @@ app.use(pino({
 }));
 
 // Connection to db
-connect().then(db => app.set('db', db));
+dbCfg.connect().then(db => app.set('db', db));
 
 // Security middlewares
 app.use(helmet());
-app.use(cors(appConfig.crossOrigin));
+app.use(cors(appCfg.crossOrigin));
 
 // Body parser (to json) middleware
 app.use(bodyParser.json());

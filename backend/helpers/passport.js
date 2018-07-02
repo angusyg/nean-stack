@@ -4,7 +4,7 @@
  * @requires {@link external:passport}
  * @requires {@link external:passport-jwt}
  * @requires {@link external:jsonwebtoken}
- * @requires config/api
+ * @requires config
  * @requires models/users
  * @requires models/errors
  * @requires helpers/logger
@@ -13,7 +13,7 @@
 const passport = require('passport');
 const { Strategy, ExtractJwt } = require('passport-jwt');
 const { JsonWebTokenError, TokenExpiredError } = require('jsonwebtoken');
-const config = require('../config/api');
+const { apiCfg } = require('../config');
 const User = require('../models/users');
 const { UnauthorizedAccessError, JwtTokenExpiredError, NoJwtTokenError, JwtTokenSignatureError } = require('../models/errors');
 const logger = require('../helpers/logger');
@@ -21,7 +21,7 @@ const logger = require('../helpers/logger');
 // Registers JWT strategy authentication
 passport.use(new Strategy({
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: config.tokenSecretKey,
+  secretOrKey: apiCfg.tokenSecretKey,
 }, (jwtPayload, cb) => {
   User.findOne({ login: jwtPayload.login })
     .then((user) => {

@@ -3,12 +3,14 @@
  * @module models/users
  * @requires {@link external:camo}
  * @requires {@link external:bcrypt}
- * @requires config/app
+ * @requires models/restdocument
+ * @requires config
  */
 
-const { Document, EmbeddedDocument } = require('camo');
+const { EmbeddedDocument } = require('camo');
 const bcrypt = require('bcrypt');
-const config = require('../config/app');
+const RestDocument = require('./restdocument');
+const { appCfg } = require('../config');
 
 /**
  * Creates a user settings
@@ -30,10 +32,10 @@ class Settings extends EmbeddedDocument {
 /**
  * Creates a User
  * @class
- * @extends external:camo.Document
+ * @extends models/restdocument
  * @name User
  */
-class User extends Document {
+class User extends RestDocument {
   constructor() {
     super();
 
@@ -101,7 +103,17 @@ class User extends Document {
    * @private
    */
   preSave() {
-    this.password = bcrypt.hashSync(this.password, config.app.saltFactor);
+    this.password = bcrypt.hashSync(this.password, appCfg.app.saltFactor);
+  }
+
+  /**
+   * Filters private property(ies) for REST result
+   * @method restFilter
+   */
+  restFilter() {
+    delete this.password;
+    delete this.refreshToken;
+    return this;
   }
 }
 

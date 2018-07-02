@@ -59,6 +59,7 @@ class ApiError extends Error {
     }
 
     logger.error(`ApiError created: ${JSON.stringify(this)}`);
+    logger.debug(`Stack: ${this.stack}`);
   }
 
   /**
@@ -268,8 +269,8 @@ class JwtTokenSignatureError extends ApiError {
  * @extends {ApiError}
  */
 class NotFoundResourceError extends ApiError {
-  constructor(id) {
-    super('RESOURCE_NOT_FOUND', `No resource found with id '${id}'`);
+  constructor(name, id) {
+    super('RESOURCE_NOT_FOUND', `No resource '${name}' found with id '${id}'`);
 
     /**
      * Name of the error

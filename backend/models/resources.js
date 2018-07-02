@@ -48,24 +48,6 @@ function parseQueryParameters(query) {
 }
 
 /**
- * Removes given properties from element
- * @function filterProperties
- * @private
- * @param {Object}          element   - Elements to be filtered
- * @param {string|string[]} props     - Property or list of properties to remove
- * @returns the element filtered
- */
-function filterProperties(element, props) {
-  if (props) {
-    const type = kindOf(props);
-    if (type === 'string') delete element[props];
-    else if (type === 'array') props.forEach(prop => delete element[prop]);
-    else throw new TypeError(`filterProperties: Props argument type must be string or string[] but got '${type}'`);
-  }
-  return element;
-}
-
-/**
  * Removes given properties from all elements of the list
  * @function listFilterProperties
  * @private
@@ -73,8 +55,8 @@ function filterProperties(element, props) {
  * @param {string|string[]} props - Property or list of properties to remove
  * @returns the list of elements filtered
  */
-function listFilterProperties(l, props) {
-  if (props && l && l.length > 0) l.forEach(element => filterProperties(element, props));
+function listFilterProperties(l) {
+  if (l && l.length > 0) l.forEach(element => element.restFilter());
   return l;
 }
 
@@ -88,9 +70,35 @@ function listFilterProperties(l, props) {
 function list(resource) {
   return (req, res, next) => {
     const options = parseQueryParameters(req.query);
-    logger.debug(`Resource list: listing ${resource.name} documents with options '${JSON.stringify(options)}'`);
+    logger.debug(`Resource list: listing '${resource.name}' documents with options '${JSON.stringify(options)}'`);
     resource.document.find({}, options)
-      .then(l => res.status(200).json({ list: listFilterProperties(l, resource.config.filter) }))
+      .then(l => res.status(200).json(listFilterProperties(l)))
+      .catch(err => next(err));
+  };
+}
+
+/**
+ * Creates a sub resource list endpoint function
+ * @function listSubResource
+ * @private
+ * @param {Object} document - Resource document
+ * @returns a function handling call of document sub resource find method
+ */
+function listSubResource(resource) {
+  return (req, res, next) => {
+    const options = parseQueryParameters(req.query);
+    const subResource = resource.config.subResourcesMap.get(req.path.substr(req.path.lastIndexOf('/') + 1));
+    logger.debug(`Sub resource list: listing sub resource '${subResource.name}' of resource '${resource.name}' document with id '${req.params.id}' with options '${JSON.stringify(options)}'`);
+    resource.document.findOne({ _id: req.params.id }, { populate: false })
+      .then((element) => {
+        if (!element) next(new NotFoundResourceError(resource.name, req.params.id));
+        else {
+          if (!Array.isArray(element[subResource.property])) element[subResource.property] = [element[subResource.property]];
+          subResource.document.find({ _id: { $in: element[subResource.property] } }, options)
+            .then(l => res.status(200).json(listFilterProperties(l)))
+            .catch(err => next(err));
+        }
+      })
       .catch(err => next(err));
   };
 }
@@ -109,11 +117,46 @@ function get(resource) {
     delete options.sort;
     delete options.limit;
     delete options.skip;
-    logger.debug(`Resource get: getting ${resource.name} document with id ${req.params.id} with options '${JSON.stringify(options)}'`);
+    logger.debug(`Resource get: getting '${resource.name}' document with id '${req.params.id}' with options '${JSON.stringify(options)}'`);
     resource.document.findOne({ _id: req.params.id }, options)
       .then((element) => {
-        if (!element) next(new NotFoundResourceError(req.params.id));
-        else res.status(200).json(filterProperties(element, resource.config.filter));
+        if (!element) next(new NotFoundResourceError(resource.name, req.params.id));
+        else res.status(200).json(element.restFilter());
+      })
+      .catch(err => next(err));
+  };
+}
+
+/**
+ * Creates a sub resource get endpoint function
+ * @function getSubResource
+ * @private
+ * @param {Object} resource - Resource
+ * @returns a function handling call of document sub resource findOne method
+ */
+function getSubResource(resource) {
+  return (req, res, next) => {
+    const options = parseQueryParameters(req.query);
+    // Only populate option is allowed
+    delete options.sort;
+    delete options.limit;
+    delete options.skip;
+    const splittedPath = req.path.split('/');
+    const subResource = resource.config.subResourcesMap.get(splittedPath[splittedPath.length - 2]);
+    logger.debug(`Sub resource get: getting sub resource '${subResource.name}' with id '${req.params.subId}' of resource '${resource.name}' document with id '${req.params.id}' with options '${JSON.stringify(options)}'`);
+    resource.document.findOne({ _id: req.params.id }, { populate: false })
+      .then((element) => {
+        if (!element) next(new NotFoundResourceError(resource.name, req.params.id));
+        else {
+          if (!Array.isArray(element[subResource.property])) element[subResource.property] = [element[subResource.property]];
+          const subElementIndex = element[subResource.property].indexOf(req.params.subId);
+          if (!subElementIndex) next(new NotFoundResourceError(subResource.name, req.params.subId));
+          else {
+            subResource.document.findOne({ _id: element[subResource.property][subElementIndex] }, options)
+              .then(e => res.status(200).json(e.restFilter()))
+              .catch(err => next(err));
+          }
+        }
       })
       .catch(err => next(err));
   };
@@ -128,10 +171,41 @@ function get(resource) {
  */
 function post(resource) {
   return (req, res, next) => {
-    logger.debug(`Resource post: creating ${resource.name} document with '${JSON.stringify(req.body)}'`);
+    logger.debug(`Resource post: creating '${resource.name}' document with '${JSON.stringify(req.body)}'`);
     resource.document.create(req.body)
       .save()
-      .then(element => res.status(201).json(filterProperties(element, resource.config.filter)))
+      .then(element => res.status(201).json(element.restFilter()))
+      .catch(err => next(err));
+  };
+}
+
+/**
+ * Creates a sub resource post endpoint function
+ * @function postSubResource
+ * @private
+ * @param {Object} document - Resource document
+ * @returns a function handling call of document sub resource creation method
+ */
+function postSubResource(resource) {
+  return (req, res, next) => {
+    const subResource = resource.config.subResourcesMap.get(req.path.substr(req.path.lastIndexOf('/') + 1));
+    logger.debug(`Sub resource post: creating sub resource '${subResource.name}' of '${resource.name}'with id '${req.params.id}' document with '${JSON.stringify(req.body)}'`);
+    resource.document.findOne({ _id: req.params.id }, { populate: false })
+      .then((el) => {
+        if (!el) next(new NotFoundResourceError(resource.name, req.params.id));
+        else {
+          subResource.document.create(req.body)
+            .save()
+            .then((element) => {
+              if (el[subResource.property]) el[subResource.property].push(element._id);
+              else el[subResource.property] = [element._id];
+              el.save()
+                .then(() => res.status(200).json(element.restFilter()))
+                .catch(err => next(err));
+            })
+            .catch(err => next(err));
+        }
+      })
       .catch(err => next(err));
   };
 }
@@ -145,10 +219,10 @@ function post(resource) {
  */
 function put(resource) {
   return (req, res, next) => {
-    logger.debug(`Resource put: updating ${resource.name} document with '${JSON.stringify(req.body)}'`);
+    logger.debug(`Resource put: updating '${resource.name}' document with '${JSON.stringify(req.body)}'`);
     resource.document.findOneAndUpdate({ _id: req.params.id }, req.body)
       .then((ele) => {
-        if (!ele) next(new NotFoundResourceError(req.params.id));
+        if (!ele) next(new NotFoundResourceError(resource.name, req.params.id));
         else res.status(204).end();
       })
       .catch(err => next(err));
@@ -156,19 +230,88 @@ function put(resource) {
 }
 
 /**
+ * Creates a sub resource put endpoint function
+ * @function putSubResource
+ * @private
+ * @param {Object} resource - Resource
+ * @returns a function handling call of document sub resource update method
+ */
+function putSubResource(resource) {
+  return (req, res, next) => {
+    const splittedPath = req.path.split('/');
+    const subResource = resource.config.subResourcesMap.get(splittedPath[splittedPath.length - 2]);
+    logger.debug(`Sub resource put: updating sub resource '${subResource.name}' with id '${req.params.subId}' of resource '${resource.name}' document with id '${req.params.id}' with '${JSON.stringify(req.body)}'`);
+    resource.document.findOne({ _id: req.params.id }, { populate: false })
+      .then((element) => {
+        if (!element) next(new NotFoundResourceError(resource.name, req.params.id));
+        else {
+          const subElementIndex = element[subResource.property].indexOf(req.params.subId);
+          if (!subElementIndex) next(new NotFoundResourceError(subResource.name, req.params.subId));
+          else {
+            subResource.document.findOneAndUpdate({ _id: req.params.subId }, req.body)
+              .then((ele) => {
+                if (!ele) next(new NotFoundResourceError(subResource.name, req.params.subId));
+                else res.status(204).end();
+              })
+              .catch(err => next(err));
+          }
+        }
+      })
+      .catch(err => next(err));
+  };
+}
+
+/**
  * Creates a resource delete endpoint function
- * @function delete
+ * @function deleteFn
  * @private
  * @param {Object} resource - Resource
  * @returns a function handling call of document delete method
  */
 function deleteFn(resource) {
   return (req, res, next) => {
-    logger.debug(`Resource delete: deleting ${resource.name} document with id '${req.params.id}'`);
+    logger.debug(`Resource delete: deleting '${resource.name}' document with id '${req.params.id}'`);
     resource.document.deleteOne({ _id: req.params.id })
       .then((deleted) => {
-        if (deleted === 0) next(new NotFoundResourceError(req.params.id));
+        if (deleted === 0) next(new NotFoundResourceError(resource.name, req.params.id));
         else res.status(204).end();
+      })
+      .catch(err => next(err));
+  };
+}
+
+/**
+ * Creates a sub resource delete endpoint function
+ * @function deleteSubResourceFn
+ * @private
+ * @param {Object} resource - Resource
+ * @returns a function handling call of document sub resource delete method
+ */
+function deleteSubResourceFn(resource) {
+  return (req, res, next) => {
+    const splittedPath = req.path.split('/');
+    const subResource = resource.config.subResourcesMap.get(splittedPath[splittedPath.length - 2]);
+    logger.debug(`Sub resource delete: deleting sub resource '${subResource.name}' with id '${req.params.subId}' of resource '${resource.name}' document with id '${req.params.id}'`);
+    resource.document.findOne({ _id: req.params.id }, { populate: false })
+      .then((element) => {
+        if (!element) next(new NotFoundResourceError(resource.name, req.params.id));
+        else {
+          const subElementIndex = element[subResource.property].indexOf(req.params.subId);
+          if (subElementIndex === -1) next(new NotFoundResourceError(subResource.name, req.params.subId));
+          else {
+            subResource.document.deleteOne({ _id: req.params.subId })
+              .then((deleted) => {
+                if (deleted === 0) next(new NotFoundResourceError(subResource.name, req.params.subId));
+                else {
+                  element[subResource.property].splice(subElementIndex, 1);
+                  element.save()
+                    .then(() => res.status(204).end())
+                    .catch(err => next(err));
+                }
+              })
+              .catch(err => next(err));
+          }
+        }
       })
       .catch(err => next(err));
   };
@@ -245,6 +388,18 @@ class Resource {
     addRoute(this.name, this.config.global || this.config.post, 'post', this.router, '/', post(this));
     addRoute(this.name, this.config.global || this.config.put, 'put', this.router, '/:id', put(this));
     addRoute(this.name, this.config.global || this.config.delete, 'delete', this.router, '/:id', deleteFn(this));
+
+    if (this.config.subResources && this.config.subResources.length > 0) {
+      this.config.subResourcesMap = new Map();
+      this.config.subResources.forEach((subResource) => {
+        this.config.subResourcesMap.set(subResource.name, subResource);
+        addRoute(this.name, this.config.global || this.config.list, 'get', this.router, `/:id/${subResource.name}`, listSubResource(this));
+        addRoute(this.name, this.config.global || this.config.get, 'get', this.router, `/:id/${subResource.name}/:subId`, getSubResource(this));
+        addRoute(this.name, this.config.global || this.config.post, 'post', this.router, `/:id/${subResource.name}`, postSubResource(this));
+        addRoute(this.name, this.config.global || this.config.put, 'put', this.router, `/:id/${subResource.name}/:subId`, putSubResource(this));
+        addRoute(this.name, this.config.global || this.config.delete, 'delete', this.router, `/:id/${subResource.name}/:subId`, deleteSubResourceFn(this));
+      });
+    }
 
     logger.info(`Resource '${this.name}': created`);
   }

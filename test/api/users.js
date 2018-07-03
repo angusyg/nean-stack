@@ -86,11 +86,9 @@ module.exports = (app, config) => {
           .end((err, res) => {
             expect(res.statusCode).to.equal(200);
             expect(res).to.be.json;
-            expect(res.body).to.be.an('object');
-            expect(res.body).to.have.own.property('list');
-            expect(res.body.list).to.be.an('array').to.have.lengthOf(2);
-            expect(res.body.list.some(element => compareUser(element, user1))).to.be.true;
-            expect(res.body.list.some(element => compareUser(element, user2))).to.be.true;
+            expect(res.body).to.be.an('array').to.have.lengthOf(2);
+            expect(res.body.some(element => compareUser(element, user1))).to.be.true;
+            expect(res.body.some(element => compareUser(element, user2))).to.be.true;
             done();
           });
       });
@@ -102,11 +100,9 @@ module.exports = (app, config) => {
           .end((err, res) => {
             expect(res.statusCode).to.equal(200);
             expect(res).to.be.json;
-            expect(res.body).to.be.an('object');
-            expect(res.body).to.have.own.property('list');
-            expect(res.body.list).to.be.an('array').to.have.lengthOf(2);
-            expect(compareUser(res.body.list[0], user2)).to.be.true;
-            expect(compareUser(res.body.list[1], user1)).to.be.true;
+            expect(res.body).to.be.an('array').to.have.lengthOf(2);
+            expect(compareUser(res.body[0], user2)).to.be.true;
+            expect(compareUser(res.body[1], user1)).to.be.true;
             done();
           });
       });
@@ -118,11 +114,9 @@ module.exports = (app, config) => {
           .end((err, res) => {
             expect(res.statusCode).to.equal(200);
             expect(res).to.be.json;
-            expect(res.body).to.be.an('object');
-            expect(res.body).to.have.own.property('list');
-            expect(res.body.list).to.be.an('array').to.have.lengthOf(2);
-            expect(compareUser(res.body.list[0], user1)).to.be.true;
-            expect(compareUser(res.body.list[1], user2)).to.be.true;
+            expect(res.body).to.be.an('array').to.have.lengthOf(2);
+            expect(compareUser(res.body[0], user1)).to.be.true;
+            expect(compareUser(res.body[1], user2)).to.be.true;
             done();
           });
       });
@@ -134,10 +128,8 @@ module.exports = (app, config) => {
           .end((err, res) => {
             expect(res.statusCode).to.equal(200);
             expect(res).to.be.json;
-            expect(res.body).to.be.an('object');
-            expect(res.body).to.have.own.property('list');
-            expect(res.body.list).to.be.an('array').to.have.lengthOf(1);
-            expect(compareUser(res.body.list[0], user2)).to.be.true;
+            expect(res.body).to.be.an('array').to.have.lengthOf(1);
+            expect(compareUser(res.body[0], user2)).to.be.true;
             done();
           });
       });
@@ -149,10 +141,8 @@ module.exports = (app, config) => {
           .end((err, res) => {
             expect(res.statusCode).to.equal(200);
             expect(res).to.be.json;
-            expect(res.body).to.be.an('object');
-            expect(res.body).to.have.own.property('list');
-            expect(res.body.list).to.be.an('array').to.have.lengthOf(1);
-            expect(compareUser(res.body.list[0], user1)).to.be.true;
+            expect(res.body).to.be.an('array').to.have.lengthOf(1);
+            expect(compareUser(res.body[0], user1)).to.be.true;
             done();
           });
       });
@@ -256,7 +246,7 @@ module.exports = (app, config) => {
             expect(res).to.be.json;
             expect(res.body).to.be.an('object');
             expect(res.body).to.have.own.property('code', 'RESOURCE_NOT_FOUND');
-            expect(res.body).to.have.own.property('message', `No resource found with id '${id}'`);
+            expect(res.body).to.have.own.property('message', `No resource 'users' found with id '${id}'`);
             expect(res.body).to.have.own.property('reqId');
             done();
           });
@@ -632,7 +622,7 @@ module.exports = (app, config) => {
             expect(res).to.be.json;
             expect(res.body).to.be.an('object');
             expect(res.body).to.have.own.property('code', 'RESOURCE_NOT_FOUND');
-            expect(res.body).to.have.own.property('message', `No resource found with id '${id}'`);
+            expect(res.body).to.have.own.property('message', `No resource 'users' found with id '${id}'`);
             expect(res.body).to.have.own.property('reqId');
             done();
           });
